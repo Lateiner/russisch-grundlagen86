@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Übung: ЗАЯВЛЕНИЕ vs. ЗАЯВКА</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --correct-color: #27ae60;
+            --wrong-color: #e74c3c;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .quiz-container {
+            background: var(--card-bg);
+            max-width: 700px;
+            width: 100%;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 1.4rem;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        p.description {
+            text-align: center;
+            color: #555;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+
+        .exercise-row {
+            display: flex;
+            flex-direction: column;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+            gap: 10px;
+        }
+
+        .situation {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 2px solid #bdc3c7;
+            font-size: 1rem;
+            outline: none;
+            cursor: pointer;
+            min-width: 160px;
+            transition: all 0.2s;
+        }
+
+        select:focus {
+            border-color: #3498db;
+        }
+
+        .feedback-icon {
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: none;
+        }
+
+        /* Responsive Anpassung */
+        @media (min-width: 600px) {
+            .exercise-row {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .situation {
+                flex: 1;
+                margin-right: 20px;
+            }
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        .btn-restart { background-color: #95a5a6; color: white; }
+        .btn-solution { background-color: #3498db; color: white; }
+        button:hover { opacity: 0.9; }
+
+        /* Status-Farben */
+        .correct { border-color: var(--correct-color) !important; background-color: #e8f8f0; }
+        .wrong { border-color: var(--wrong-color) !important; background-color: #fdecea; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <h1>Wähle das richtige Substantiv</h1>
+    <p class="description">Entscheide basierend auf dem Kontext: Handelt es sich um ein offizielles Schreiben (ЗАЯВЛЕНИЕ) oder eine Bedarfs-Anforderung (ЗАЯВКА)?</p>
+
+    <div id="quiz-content">
+        <!-- Aufgaben werden per JS geladen -->
+    </div>
+
+    <div class="controls">
+        <button class="btn-restart" onclick="restartQuiz()">Neustart</button>
+        <button class="btn-solution" onclick="showSolution()">Lösung</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        { id: 1, text: "Du möchtest deinen Job offiziell kündigen.", correct: "ЗАЯВЛЕНИЕ" },
+        { id: 2, text: "Der Aufzug in deinem Haus ist steckengeblieben und muss repariert werden.", correct: "ЗАЯВКА" },
+        { id: 3, text: "Du musst bei der Polizei einen Diebstahl melden.", correct: "ЗАЯВЛЕНИЕ" },
+        { id: 4, text: "Du beantragst beim Arbeitgeber schriftlich deinen Jahresurlaub.", correct: "ЗАЯВЛЕНИЕ" },
+        { id: 5, text: "Du bestellst einen neuen Internetanschluss für deine Wohnung.", correct: "ЗАЯВКА" },
+        { id: 6, text: "Eine Straßenlaterne vor deinem Haus ist kaputt.", correct: "ЗАЯВКА" },
+        { id: 7, text: "Du meldest im Fundbüro offiziell, dass du etwas gefunden hast.", correct: "ЗАЯВЛЕНИЕ" },
+        { id: 8, text: "Du forderst einen Handwerker an, weil die Heizung nicht warm wird.", correct: "ЗАЯВКА" }
+    ];
+
+    const options = ["-- wählen --", "ЗАЯВЛЕНИЕ", "ЗАЯВКА", "ОБЪЯВЛЕНИЕ"];
+
+    function initQuiz() {
+        const container = document.getElementById('quiz-content');
+        container.innerHTML = '';
+        
+        questions.forEach((q, index) => {
+            const row = document.createElement('div');
+            row.className = 'exercise-row';
+            
+            row.innerHTML = `
+                <div class="situation">${index + 1}. ${q.text}</div>
+                <div class="input-group">
+                    <select id="select-${index}" onchange="checkAnswer(${index})">
+                        ${options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                    </select>
+                    <span id="feedback-${index}" class="feedback-icon"></span>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    function checkAnswer(index) {
+        const select = document.getElementById(`select-${index}`);
+        const feedback = document.getElementById(`feedback-${index}`);
+        const userAnswer = select.value;
+
+        if (userAnswer === options[0]) {
+            select.className = '';
+            feedback.style.display = 'none';
+            return;
+        }
+
+        feedback.style.display = 'inline';
+        if (userAnswer === questions[index].correct) {
+            select.className = 'correct';
+            feedback.textContent = '✓';
+            feedback.style.color = 'var(--correct-color)';
+        } else {
+            select.className = 'wrong';
+            feedback.textContent = '✗';
+            feedback.style.color = 'var(--wrong-color)';
+        }
+    }
+
+    function restartQuiz() {
+        initQuiz();
+    }
+
+    function showSolution() {
+        questions.forEach((q, index) => {
+            const select = document.getElementById(`select-${index}`);
+            select.value = q.correct;
+            checkAnswer(index);
+        });
+    }
+
+    // Initialisierung beim Laden
+    window.onload = initQuiz;
+</script>
+
+</body>
+</html>
