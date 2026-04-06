@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sortierung: ЗАЯВЛЕНИЕ vs. ЗАЯВКА</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #1b5e20; /* Kräftiges Grün */
+            --error-color: #c62828;
+            --bg-color: #f0f2f5;
+            --z-color: #1a237e; /* Dunkelblau für ЗАЯВЛЕНИЕ */
+            --zk-color: #e65100; /* Dunkelorange für ЗАЯВКА */
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 900px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.5rem; color: var(--primary-color); margin-bottom: 10px; }
+        p.desc { color: #555; margin-bottom: 25px; }
+
+        /* Körbe / Zielbereiche */
+        .baskets {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .basket {
+            padding: 20px;
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background: #fafafa;
+        }
+
+        .basket h2 { margin: 0 0 10px 0; font-size: 1.3rem; }
+        .basket p { margin: 0; font-size: 0.85rem; color: #777; }
+
+        .basket.active-target { border-color: var(--secondary-color); background: #e3f2fd; transform: scale(1.02); }
+        
+        #basket-z { color: var(--z-color); border-color: var(--z-color); }
+        #basket-zk { color: var(--zk-color); border-color: var(--zk-color); }
+
+        /* Situations-Karten */
+        .items-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            min-height: 150px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 12px;
+        }
+
+        .item-card {
+            padding: 15px;
+            background: white;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            cursor: pointer;
+            width: calc(50% - 20px);
+            max-width: 200px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        @media (max-width: 600px) {
+            .baskets { grid-template-columns: 1fr; }
+            .item-card { width: 100%; max-width: none; }
+        }
+
+        .item-card:hover { border-color: var(--secondary-color); transform: translateY(-2px); }
+        .item-card.selected { border-color: var(--secondary-color); background: #e3f2fd; box-shadow: 0 0 10px rgba(52, 152, 219, 0.5); }
+        
+        /* Zustand für korrekt zugeordnete Items */
+        .item-card.correct {
+            background-color: var(--success-color) !important;
+            color: white !important;
+            border-color: var(--success-color) !important;
+            opacity: 0;
+            transform: scale(0.5);
+            pointer-events: none;
+            transition: all 0.5s ease;
+        }
+
+        /* Lösung-Zustand */
+        .item-card.solved-z { background-color: var(--z-color) !important; color: white; border: none; opacity: 1; pointer-events: none; }
+        .item-card.solved-zk { background-color: var(--zk-color) !important; color: white; border: none; opacity: 1; pointer-events: none; }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            transition: opacity 0.2s;
+        }
+
+        .btn-restart { background: #95a5a6; }
+        .btn-solution { background: var(--secondary-color); }
+        button:hover { opacity: 0.9; }
+
+        #final-msg {
+            display: none;
+            font-size: 1.4rem;
+            color: var(--success-color);
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Kategorien-Sortierung</h1>
+    <p class="desc">Klicke eine Situation an und wähle dann den richtigen Korb.</p>
+
+    <div class="baskets">
+        <div id="basket-z" class="basket" onclick="assignTo('ЗАЯВЛЕНИЕ')">
+            <h2>ЗАЯВЛЕНИЕ</h2>
+            <p>(Offizielle Erklärung / Anzeige)</p>
+        </div>
+        <div id="basket-zk" class="basket" onclick="assignTo('ЗАЯВКА')">
+            <h2>ЗАЯВКА</h2>
+            <p>(Service-Anforderung / Bedarf)</p>
+        </div>
+    </div>
+
+    <div class="items-container" id="pool">
+        <!-- Karten werden hier geladen -->
+    </div>
+
+    <div id="final-msg">Hervorragend! Alles richtig sortiert.</div>
+
+    <div class="controls">
+        <button class="btn-restart" onclick="initGame()">Neustart</button>
+        <button class="btn-solution" onclick="showSolution()">Lösung anzeigen</button>
+    </div>
+</div>
+
+<script>
+    const situations = [
+        { id: 1, text: "Kündigung des Arbeitsvertrags", cat: "ЗАЯВЛЕНИЕ" },
+        { id: 2, text: "Meldung eines Diebstahls bei der Polizei", cat: "ЗАЯВЛЕНИЕ" },
+        { id: 3, text: "Reparatur des kaputten Aufzugs im Haus", cat: "ЗАЯВКА" },
+        { id: 4, text: "Bestellung eines Internetanschlusses", cat: "ЗАЯВКА" },
+        { id: 5, text: "Schriftlicher Antrag auf Jahresurlaub", cat: "ЗАЯВЛЕНИЕ" },
+        { id: 6, text: "Meldung einer kaputten Straßenlaterne", cat: "ЗАЯВКА" },
+        { id: 7, text: "Offizielle Anzeige im Fundbüro", cat: "ЗАЯВЛЕНИЕ" },
+        { id: 8, text: "Anforderung eines Handwerkers (Heizung)", cat: "ЗАЯВКА" }
+    ];
+
+    let selectedItem = null;
+    let matchesCount = 0;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initGame() {
+        const pool = document.getElementById('pool');
+        const winMsg = document.getElementById('final-msg');
+        pool.innerHTML = '';
+        winMsg.style.display = 'none';
+        selectedItem = null;
+        matchesCount = 0;
+
+        const shuffled = shuffle([...situations]);
+        shuffled.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'item-card';
+            div.textContent = s.text;
+            div.dataset.id = s.id;
+            div.onclick = (e) => {
+                e.stopPropagation();
+                selectCard(div);
+            };
+            pool.appendChild(div);
+        });
+    }
+
+    function selectCard(el) {
+        if (el.classList.contains('correct')) return;
+        
+        document.querySelectorAll('.item-card').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedItem = situations.find(s => s.id == el.dataset.id);
+        
+        // Optisches Feedback für die Körbe
+        document.querySelectorAll('.basket').forEach(b => b.classList.add('active-target'));
+    }
+
+    function assignTo(category) {
+        if (!selectedItem) return;
+
+        const cardEl = document.querySelector(`.item-card[data-id="${selectedItem.id}"]`);
+
+        if (selectedItem.cat === category) {
+            // Richtig
+            cardEl.classList.add('correct');
+            matchesCount++;
+            selectedItem = null;
+            document.querySelectorAll('.basket').forEach(b => b.classList.remove('active-target'));
+            
+            if (matchesCount === situations.length) {
+                document.getElementById('final-msg').style.display = 'block';
+            }
+        } else {
+            // Falsch
+            cardEl.style.backgroundColor = "var(--error-color)";
+            cardEl.style.color = "white";
+            setTimeout(() => {
+                cardEl.style.backgroundColor = "white";
+                cardEl.style.color = "var(--text-color)";
+                cardEl.classList.remove('selected');
+            }, 500);
+            selectedItem = null;
+            document.querySelectorAll('.basket').forEach(b => b.classList.remove('active-target'));
+        }
+    }
+
+    function showSolution() {
+        situations.forEach(s => {
+            const cardEl = document.querySelector(`.item-card[data-id="${s.id}"]`);
+            if (!cardEl.classList.contains('correct')) {
+                cardEl.classList.remove('selected');
+                if (s.cat === 'ЗАЯВЛЕНИЕ') {
+                    cardEl.classList.add('solved-z');
+                } else {
+                    cardEl.classList.add('solved-zk');
+                }
+            }
+        });
+        document.getElementById('final-msg').style.display = 'block';
+        document.getElementById('final-msg').textContent = "Lösung: Blau = ЗАЯВЛЕНИЕ | Orange = ЗАЯВКА";
+    }
+
+    window.onload = initGame;
+</script>
+
+</body>
+</html>
