@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synonym-Matching: Russisch</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --bg-color: #f0f4f8;
+            --text-color: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            max-width: 700px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.4rem; margin-bottom: 10px; }
+        p.desc { color: #555; margin-bottom: 25px; }
+
+        .matching-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            min-height: 250px;
+        }
+
+        @media (max-width: 500px) {
+            .matching-grid { grid-template-columns: 1fr; }
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .card {
+            padding: 15px;
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            font-size: 1.1rem;
+            font-weight: 500;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .card:hover { border-color: var(--secondary-color); background: #f7fbff; }
+        .card.selected { border-color: var(--secondary-color); background: #e3f2fd; transform: scale(1.03); }
+        .card.wrong { border-color: #e74c3c; background: #fdecea; }
+        
+        .card.matched {
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2;
+        }
+
+        .btn-restart { background: #7f8c8d; color: white; }
+        .btn-solution { background: var(--secondary-color); color: white; }
+        button:hover { opacity: 0.9; }
+
+        #win-msg {
+            display: none;
+            color: #27ae60;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin: 20px 0;
+        }
+
+        .label {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Synonym-Paare finden</h1>
+    <p class="desc">Verbinde das formelle Verb mit seinem einfacheren Synonym.</p>
+
+    <div id="win-msg">Sehr gut! Alle Synonyme gefunden.</div>
+
+    <div class="matching-grid">
+        <div class="column">
+            <div class="label">Formell</div>
+            <div id="formal-col"></div>
+        </div>
+        <div class="column">
+            <div class="label">Einfach</div>
+            <div id="simple-col"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-restart" onclick="initGame()">Neustart</button>
+        <button class="btn-solution" onclick="showSolution()">Lösung</button>
+    </div>
+</div>
+
+<script>
+    const synonyms = [
+        { id: 1, formal: "ВЫЯВИТЬ", simple: "НАЙТИ", color: "#FFEBEE" },
+        { id: 2, formal: "ОБЪЯВИТЬ", simple: "СООБЩИТЬ", color: "#E8F5E9" },
+        { id: 3, formal: "ЗАЯВИТЬ", simple: "СКАЗАТЬ", color: "#E3F2FD" },
+        { id: 4, formal: "ВЫЯВЛЯТЬ", simple: "ОБНАРУЖИВАТЬ", color: "#FFF3E0" },
+        { id: 5, formal: "ЗАЯВЛЕНИЕ", simple: "СООБЩЕНИЕ", color: "#F3E5F5" }
+    ];
+
+    let selectedFormal = null;
+    let selectedSimple = null;
+    let matchesCount = 0;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initGame() {
+        const formalCol = document.getElementById('formal-col');
+        const simpleCol = document.getElementById('simple-col');
+        const winMsg = document.getElementById('win-msg');
+        
+        formalCol.innerHTML = '';
+        simpleCol.innerHTML = '';
+        winMsg.style.display = 'none';
+        selectedFormal = null;
+        selectedSimple = null;
+        matchesCount = 0;
+
+        const shuffledFormal = shuffle([...synonyms]);
+        const shuffledSimple = shuffle([...synonyms]);
+
+        shuffledFormal.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.textContent = s.formal;
+            div.dataset.id = s.id;
+            div.onclick = () => selectCard(div, 'formal');
+            formalCol.appendChild(div);
+        });
+
+        shuffledSimple.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.textContent = s.simple;
+            div.dataset.id = s.id;
+            div.onclick = () => selectCard(div, 'simple');
+            simpleCol.appendChild(div);
+        });
+    }
+
+    function selectCard(card, type) {
+        if (card.classList.contains('matched')) return;
+
+        // Markierung in der aktuellen Spalte zurücksetzen
+        const cardsInCol = card.parentElement.querySelectorAll('.card');
+        cardsInCol.forEach(c => c.classList.remove('selected', 'wrong'));
+
+        card.classList.add('selected');
+
+        if (type === 'formal') selectedFormal = card;
+        else selectedSimple = card;
+
+        if (selectedFormal && selectedSimple) {
+            checkMatch();
+        }
+    }
+
+    function checkMatch() {
+        if (selectedFormal.dataset.id === selectedSimple.dataset.id) {
+            const f = selectedFormal;
+            const s = selectedSimple;
+            f.classList.add('matched');
+            s.classList.add('matched');
+            matchesCount++;
+            selectedFormal = null;
+            selectedSimple = null;
+            if (matchesCount === synonyms.length) {
+                setTimeout(() => document.getElementById('win-msg').style.display = 'block', 500);
+            }
+        } else {
+            const f = selectedFormal;
+            const s = selectedSimple;
+            f.classList.add('wrong');
+            s.classList.add('wrong');
+            selectedFormal = null;
+            selectedSimple = null;
+            setTimeout(() => {
+                f.classList.remove('wrong', 'selected');
+                s.classList.remove('wrong', 'selected');
+            }, 500);
+        }
+    }
+
+    function showSolution() {
+        const remainingCards = document.querySelectorAll('.card:not(.matched)');
+        remainingCards.forEach(card => {
+            const pair = synonyms.find(p => p.id == card.dataset.id);
+            card.style.backgroundColor = pair.color;
+            card.style.borderColor = pair.color;
+        });
+
+        setTimeout(() => {
+            remainingCards.forEach(card => card.classList.add('matched'));
+            matchesCount = synonyms.length;
+            document.getElementById('win-msg').style.display = 'block';
+        }, 1500);
+    }
+
+    window.onload = initGame;
+</script>
+
+</body>
+</html>
