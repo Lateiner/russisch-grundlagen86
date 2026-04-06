@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprechsituationen: Russisch üben</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #1b5e20; /* Kräftiges Grün */
+            --error-color: #c62828;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 650px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.4rem; color: var(--primary-color); margin-bottom: 5px; }
+        .progress { color: #888; font-size: 0.9rem; margin-bottom: 20px; font-weight: bold; }
+
+        .situation-card {
+            background: #f9f9f9;
+            border-left: 5px solid var(--secondary-color);
+            padding: 25px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: left;
+        }
+
+        .situation-title {
+            font-weight: bold;
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+
+        .situation-text {
+            font-size: 1.2rem;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        /* Antwort-Optionen */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        @media (min-width: 480px) {
+            .options-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .option-btn {
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--primary-color);
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--secondary-color);
+            background: #f0f7ff;
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-color) !important;
+            color: white !important;
+            border-color: var(--success-color) !important;
+            opacity: 1 !important;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error-color) !important;
+            color: white !important;
+            border-color: var(--error-color) !important;
+        }
+
+        /* Feedback Bereich */
+        #feedback-area {
+            min-height: 50px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: none;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            background: #95a5a6;
+            color: white;
+        }
+
+        #next-btn { background: var(--primary-color); display: none; }
+
+        #final-screen { display: none; padding: 20px; }
+        #final-screen h2 { color: var(--success-color); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="quiz-ui">
+        <h1>Was sagst du in dieser Situation?</h1>
+        <div class="progress" id="progress">Frage 1 von 10</div>
+
+        <div class="situation-card">
+            <div class="situation-title">Situation:</div>
+            <div class="situation-text" id="situation">Lade Situation...</div>
+        </div>
+
+        <div id="feedback-area"></div>
+
+        <div class="options-grid" id="options"></div>
+    </div>
+
+    <div id="final-screen">
+        <h2>Hervorragend!</h2>
+        <p>Du hast alle Alltagssituationen gemeistert und weißt genau, wann du welches Wort benutzen musst.</p>
+    </div>
+
+    <div class="controls">
+        <button class="nav-btn" onclick="restartQuiz()">Neustart</button>
+        <button class="nav-btn" onclick="showSolution()">Lösung</button>
+        <button class="nav-btn" id="next-btn" onclick="nextQuestion()">Nächste Situation</button>
+    </div>
+</div>
+
+<script>
+    const allSituations = [
+        { s: "Du bist im Hotel und das WLAN funktioniert nicht. Du möchtest, dass es repariert wird.", a: "ЗАЯВКА" },
+        { s: "Dein Fahrrad wurde gestohlen und du bist bei der Polizei, um es zu melden.", a: "ЗАЯВЛЕНИЕ" },
+        { s: "Du möchtest deinen Job offiziell kündigen.", a: "ЗАЯВЛЕНИЕ" },
+        { s: "Du möchtest eine Anzeige in der Zeitung aufgeben, um dein Auto zu verkaufen.", a: "ОБЪЯВЛЕНИЕ" },
+        { s: "Der Aufzug in deinem Wohnhaus ist kaputt. Du meldest es dem Service-Dienst.", a: "ЗАЯВКА" },
+        { s: "Du hängst einen Zettel an die Tür, um deine Nachbarn über eine Party zu informieren.", a: "ОБЪЯВЛЕНИЕ" },
+        { s: "Du bist im Fundbüro und füllst ein Formular für deinen verlorenen Schlüssel aus.", a: "ЗАЯВЛЕНИЕ" },
+        { s: "In deiner Firma fehlen neue Druckerpatronen. Du forderst sie beim Einkauf an.", a: "ЗАЯВКА" },
+        { s: "Du hörst am Bahnhof eine Lautsprecherdurchsage über eine Gleisänderung.", a: "ОБЪЯВЛЕНИЕ" },
+        { s: "Du beantragst offiziell beim Standesamt die Eheschließung.", a: "ЗАЯВЛЕНИЕ" }
+    ];
+
+    let currentIdx = 0;
+    let shuffledSituations = [];
+    let answered = false;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initQuiz() {
+        shuffledSituations = shuffle([...allSituations]);
+        currentIdx = 0;
+        document.getElementById('final-screen').style.display = 'none';
+        document.getElementById('quiz-ui').style.display = 'block';
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        answered = false;
+        const q = shuffledSituations[currentIdx];
+        document.getElementById('progress').textContent = `Situation ${currentIdx + 1} von ${shuffledSituations.length}`;
+        document.getElementById('situation').textContent = q.s;
+        document.getElementById('feedback-area').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'none';
+
+        // Buttons mischen
+        const options = shuffle(["ЗАЯВЛЕНИЕ", "ЗАЯВКА", "ОБЪЯВЛЕНИЕ"]);
+        const container = document.getElementById('options');
+        container.innerHTML = '';
+
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt;
+            btn.onclick = () => checkAnswer(btn, opt);
+            container.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(btn, choice) {
+        if (answered) return;
+        answered = true;
+        const correct = shuffledSituations[currentIdx].a;
+        const feedback = document.getElementById('feedback-area');
+        feedback.style.display = 'block';
+
+        if (choice === correct) {
+            btn.classList.add('correct');
+            feedback.textContent = "Richtig!";
+            feedback.style.color = "var(--success-color)";
+        } else {
+            btn.classList.add('wrong');
+            feedback.textContent = `Nicht ganz. Richtig wäre: ${correct}`;
+            feedback.style.color = "var(--error-color)";
+            // Zeige den korrekten Button
+            Array.from(document.querySelectorAll('.option-btn')).forEach(b => {
+                if (b.textContent === correct) b.classList.add('correct');
+            });
+        }
+
+        Array.from(document.querySelectorAll('.option-btn')).forEach(b => b.disabled = true);
+        document.getElementById('next-btn').style.display = 'inline-block';
+    }
+
+    function nextQuestion() {
+        if (currentIdx < shuffledSituations.length - 1) {
+            currentIdx++;
+            loadQuestion();
+        } else {
+            document.getElementById('quiz-ui').style.display = 'none';
+            document.getElementById('final-screen').style.display = 'block';
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('progress').textContent = "Abgeschlossen";
+        }
+    }
+
+    function showSolution() {
+        if (answered) return;
+        const correct = shuffledSituations[currentIdx].a;
+        Array.from(document.querySelectorAll('.option-btn')).forEach(b => {
+            if (b.textContent === correct) b.classList.add('correct');
+            b.disabled = true;
+        });
+        answered = true;
+        document.getElementById('next-btn').style.display = 'inline-block';
+    }
+
+    function restartQuiz() {
+        initQuiz();
+    }
+
+    window.onload = initQuiz;
+</script>
+
+</body>
+</html>
