@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Präfix-Wechsel: Russische Verben</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #1b5e20; /* Kräftiges Grün */
+            --error-color: #c62828;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 700px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.4rem; color: var(--primary-color); margin-bottom: 10px; }
+        .progress { color: #888; font-size: 0.9rem; margin-bottom: 25px; font-weight: bold; }
+
+        /* Satz-Anzeige */
+        .sentence-display {
+            background: #f9f9f9;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            line-height: 1.6;
+            border: 2px solid #eee;
+            transition: all 0.3s;
+        }
+
+        .sentence-display.correct {
+            background-color: var(--success-color) !important;
+            color: white !important;
+            border-color: var(--success-color) !important;
+        }
+
+        .verb-link {
+            color: var(--secondary-color);
+            text-decoration: underline dashed;
+            cursor: pointer;
+            font-weight: bold;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .verb-link:hover {
+            background-color: #e3f2fd;
+        }
+
+        .correct .verb-link {
+            color: white;
+            text-decoration: none;
+            cursor: default;
+        }
+
+        .target-translation {
+            font-style: italic;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        /* Auswahl-Buttons */
+        .options-area {
+            display: none;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #fff3e0;
+            border-radius: 10px;
+            animation: fadeIn 0.4s;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .option-btn {
+            padding: 12px 20px;
+            margin: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: 2px solid var(--secondary-color);
+            background: white;
+            color: var(--secondary-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .nav-btn {
+            padding: 12px 22px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            background: #95a5a6;
+        }
+
+        #next-btn { background: var(--primary-color); display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Präfix-Wechsel</h1>
+    <div class="progress" id="progress">Frage 1 von 5</div>
+
+    <div id="quiz-area">
+        <p><i>Klicke auf das blaue Verb, um es zu ändern:</i></p>
+        <div class="sentence-display" id="sentence-box">
+            <span id="part1"></span>
+            <span id="verb-trigger" class="verb-link" onclick="toggleOptions()"></span>
+            <span id="part2"></span>
+        </div>
+
+        <div class="target-translation" id="translation"></div>
+
+        <div class="options-area" id="options-box">
+            <p>Wähle das passende Verb für die Übersetzung:</p>
+            <div id="button-container"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="nav-btn" onclick="restartQuiz()">Neustart</button>
+        <button class="nav-btn" onclick="showSolution()">Lösung</button>
+        <button class="nav-btn" id="next-btn" onclick="nextQuestion()">Weiter</button>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        {
+            part1: "Директор ",
+            startVerb: "ОБЪЯВИЛ",
+            part2: " об увольнении.",
+            targetVerb: "ЗАЯВИЛ",
+            options: ["ЗАЯВИЛ", "ВЫЯВИЛ", "ОБЪЯВИЛ"],
+            translation: "„Der Direktor kündigte seinen Rücktritt offiziell an.“"
+        },
+        {
+            part1: "Проверка ",
+            startVerb: "ЗАЯВИЛА",
+            part2: " ошибки в работе.",
+            targetVerb: "ВЫЯВИЛА",
+            options: ["ОБЪЯВИЛА", "ВЫЯВИЛА", "ЗАЯВИЛА"],
+            translation: "„Die Prüfung deckte Fehler in der Arbeit auf.“"
+        },
+        {
+            part1: "Врач ",
+            startVerb: "ЗАЯВИЛ",
+            part2: " серьёзное заболевание.",
+            targetVerb: "ВЫЯВИЛ",
+            options: ["ВЫЯВИЛ", "ОБЪЯВИЛ", "ЗАЯВИЛ"],
+            translation: "„Der Arzt stellte eine ernste Krankheit fest.“"
+        },
+        {
+            part1: "Студентам ",
+            startVerb: "ВЫЯВИЛИ",
+            part2: " результаты экзаменов.",
+            targetVerb: "ОБЪЯВИЛИ",
+            options: ["ЗАЯВИЛИ", "ОБЪЯВИЛИ", "ВЫЯВИЛИ"],
+            translation: "„Den Studenten wurden die Prüfungsergebnisse verkündet.“"
+        },
+        {
+            part1: "Президент ",
+            startVerb: "ВЫЯВИЛ",
+            part2: " войну законченной.",
+            targetVerb: "ОБЪЯВИЛ",
+            options: ["ОБЪЯВИЛ", "ЗАЯВИЛ", "ВЫЯВИЛ"],
+            translation: "„Der Präsident erklärte den Krieg für beendet.“"
+        }
+    ];
+
+    let currentIdx = 0;
+    let answered = false;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initQuiz() {
+        currentIdx = 0;
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        answered = false;
+        const q = quizData[currentIdx];
+        
+        document.getElementById('progress').textContent = `Satz ${currentIdx + 1} von ${quizData.length}`;
+        document.getElementById('part1').textContent = q.part1;
+        document.getElementById('verb-trigger').textContent = q.startVerb;
+        document.getElementById('part2').textContent = q.part2;
+        document.getElementById('translation').textContent = q.translation;
+        
+        document.getElementById('sentence-box').classList.remove('correct');
+        document.getElementById('options-box').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'none';
+
+        const btnContainer = document.getElementById('button-container');
+        btnContainer.innerHTML = '';
+        
+        // Optionen mischen
+        const shuffledOptions = shuffle([...q.options]);
+        shuffledOptions.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt;
+            btn.onclick = () => checkAnswer(opt);
+            btnContainer.appendChild(btn);
+        });
+    }
+
+    function toggleOptions() {
+        if (answered) return;
+        const box = document.getElementById('options-box');
+        box.style.display = (box.style.display === 'none' || box.style.display === '') ? 'block' : 'none';
+    }
+
+    function checkAnswer(choice) {
+        const q = quizData[currentIdx];
+        if (choice === q.targetVerb) {
+            applyCorrect(choice);
+        } else {
+            alert("Das passt nicht zur gewünschten Bedeutung. Versuche es noch einmal!");
+        }
+    }
+
+    function applyCorrect(verb) {
+        answered = true;
+        document.getElementById('verb-trigger').textContent = verb;
+        document.getElementById('sentence-box').classList.add('correct');
+        document.getElementById('options-box').style.display = 'none';
+        
+        if (currentIdx < quizData.length - 1) {
+            document.getElementById('next-btn').style.display = 'inline-block';
+        } else {
+            alert("Hervorragend! Du hast alle Sätze korrekt angepasst.");
+        }
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        loadQuestion();
+    }
+
+    function showSolution() {
+        if (answered) return;
+        applyCorrect(quizData[currentIdx].targetVerb);
+    }
+
+    function restartQuiz() {
+        initQuiz();
+    }
+
+    window.onload = initQuiz;
+</script>
+
+</body>
+</html>
