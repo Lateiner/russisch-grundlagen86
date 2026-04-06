@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Verb-Tinder v2</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --success-color: #1b5e20; /* Kräftiges Grün */
+            --error-color: #c62828;
+            --bg-color: #f0f2f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden; /* Verhindert das Scrollen der Seite */
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 400px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        header { text-align: center; margin-bottom: 20px; }
+        h1 { font-size: 1.4rem; margin: 0; color: var(--primary-color); }
+        .stats { color: #666; font-size: 0.9rem; margin-top: 5px; }
+
+        /* Spielfeld */
+        .game-area {
+            flex-grow: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card {
+            position: absolute;
+            width: 100%;
+            max-width: 320px;
+            height: 400px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            text-align: center;
+            box-sizing: border-box;
+            user-select: none;
+            touch-action: none; /* Wichtig: Deaktiviert Browser-Gesten */
+            transition: transform 0.2s ease-out, opacity 0.2s;
+            z-index: 10;
+        }
+
+        .sentence {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #333;
+            line-height: 1.3;
+            margin-bottom: 15px;
+        }
+
+        .instruction { font-size: 0.9rem; color: #999; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Indikatoren (Richtig/Falsch Overlays) */
+        .indicator {
+            position: absolute;
+            top: 20px;
+            padding: 10px 20px;
+            border: 4px solid;
+            border-radius: 10px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .indicator.right { color: var(--success-color); border-color: var(--success-color); right: 20px; transform: rotate(15deg); }
+        .indicator.left { color: var(--error-color); border-color: var(--error-color); left: 20px; transform: rotate(-15deg); }
+
+        /* Footer Buttons */
+        .footer-controls {
+            display: flex;
+            justify-content: space-evenly;
+            padding: 20px 0;
+        }
+
+        .circle-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: none;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            font-size: 1.8rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.1s;
+        }
+        .circle-btn:active { transform: scale(0.9); }
+        .btn-x { color: var(--error-color); border: 2px solid var(--error-color); }
+        .btn-check { color: var(--success-color); border: 2px solid var(--success-color); }
+
+        /* Ergebnisschirm */
+        #result-screen {
+            display: none;
+            background: white;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 100;
+            padding: 30px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        .result-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+            font-size: 1rem;
+        }
+        .res-correct { color: var(--success-color); font-weight: bold; }
+        .res-wrong { color: var(--error-color); }
+
+        .restart-btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <h1>Verb-Tinder</h1>
+        <div class="stats" id="stats">Satz 1 von 10</div>
+    </header>
+
+    <div class="game-area" id="game-area">
+        <div class="card" id="active-card">
+            <div class="indicator left">FEHLER</div>
+            <div class="indicator right">KORREKT</div>
+            <div class="sentence" id="sentence-text">Lade...</div>
+            <div class="instruction">Wische zum Antworten</div>
+        </div>
+    </div>
+
+    <div class="footer-controls">
+        <button class="circle-btn btn-x" onclick="forceSwipe('left')">✖</button>
+        <button class="circle-btn btn-check" onclick="forceSwipe('right')">✔</button>
+    </div>
+
+    <div id="result-screen">
+        <h2>Deine Ergebnisse</h2>
+        <div id="result-list"></div>
+        <button class="restart-btn" onclick="location.reload()">Neustart</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        { s: "Проверка выявила ошибки в работе.", ok: true },
+        { s: "Врач объявил болезнь у пациента.", ok: false },
+        { s: "Директор заявил о своём увольнении.", ok: true },
+        { s: "Я подал заявление в газetu.", ok: false },
+        { s: "Президент объявиl войну законченной.", ok: true },
+        { s: "Анализ помогает выявить болезнь.", ok: true },
+        { s: "Я сделал объявление о ремонте лифта.", ok: false },
+        { s: "Вчера студентам объявили результаты.", ok: true },
+        { s: "Нужно выявить о краже в полицию.", ok: false },
+        { s: "На столбе висит объявление.", ok: true }
+    ];
+
+    let currentIdx = 0;
+    let results = [];
+    let isDragging = false;
+    let startX = 0;
+    let currentX = 0;
+
+    const card = document.getElementById('active-card');
+    const sentenceText = document.getElementById('sentence-text');
+    const indicatorRight = card.querySelector('.indicator.right');
+    const indicatorLeft = card.querySelector('.indicator.left');
+
+    function loadNext() {
+        if (currentIdx >= questions.length) {
+            showFinalResults();
+            return;
+        }
+        card.style.transition = 'none';
+        card.style.transform = 'translateX(0) rotate(0)';
+        card.style.opacity = '1';
+        indicatorRight.style.opacity = '0';
+        indicatorLeft.style.opacity = '0';
+        sentenceText.textContent = questions[currentIdx].s;
+        document.getElementById('stats').textContent = `Satz ${currentIdx + 1} von ${questions.length}`;
+    }
+
+    // Event Listener für Touch und Maus
+    card.addEventListener('mousedown', startDrag);
+    card.addEventListener('touchstart', (e) => startDrag(e.touches[0]));
+
+    window.addEventListener('mousemove', moveDrag);
+    window.addEventListener('touchmove', (e) => moveDrag(e.touches[0]), { passive: false });
+
+    window.addEventListener('mouseup', endDrag);
+    window.addEventListener('touchend', endDrag);
+
+    function startDrag(e) {
+        isDragging = true;
+        startX = e.clientX;
+        card.style.transition = 'none';
+    }
+
+    function moveDrag(e) {
+        if (!isDragging) return;
+        
+        currentX = e.clientX - startX;
+        let rotation = currentX / 15;
+        card.style.transform = `translateX(${currentX}px) rotate(${rotation}deg)`;
+
+        // Overlays zeigen
+        if (currentX > 50) {
+            indicatorRight.style.opacity = Math.min(currentX / 150, 1);
+            indicatorLeft.style.opacity = 0;
+        } else if (currentX < -50) {
+            indicatorLeft.style.opacity = Math.min(Math.abs(currentX) / 150, 1);
+            indicatorRight.style.opacity = 0;
+        } else {
+            indicatorRight.style.opacity = 0;
+            indicatorLeft.style.opacity = 0;
+        }
+    }
+
+    function endDrag() {
+        if (!isDragging) return;
+        isDragging = false;
+
+        if (currentX > 120) {
+            swipeAction('right');
+        } else if (currentX < -120) {
+            swipeAction('left');
+        } else {
+            card.style.transition = 'transform 0.3s';
+            card.style.transform = 'translateX(0) rotate(0)';
+            indicatorRight.style.opacity = 0;
+            indicatorLeft.style.opacity = 0;
+        }
+        currentX = 0;
+    }
+
+    function swipeAction(direction) {
+        const isCorrect = (direction === 'right');
+        const question = questions[currentIdx];
+        const userWasRight = (isCorrect === question.ok);
+
+        results.push({
+            sentence: question.s,
+            userRight: userWasRight
+        });
+
+        card.style.transition = 'transform 0.5s, opacity 0.5s';
+        const flyX = direction === 'right' ? 1000 : -1000;
+        card.style.transform = `translateX(${flyX}px) rotate(${flyX / 20}deg)`;
+        card.style.opacity = '0';
+
+        setTimeout(() => {
+            currentIdx++;
+            loadNext();
+        }, 300);
+    }
+
+    function forceSwipe(direction) {
+        if (isDragging) return;
+        swipeAction(direction);
+    }
+
+    function showFinalResults() {
+        document.getElementById('result-screen').style.display = 'block';
+        const list = document.getElementById('result-list');
+        list.innerHTML = results.map(r => `
+            <div class="result-item ${r.userRight ? 'res-correct' : 'res-wrong'}">
+                ${r.userRight ? '✔' : '✖'} ${r.sentence}
+            </div>
+        `).join('');
+    }
+
+    window.onload = loadNext;
+</script>
+
+</body>
+</html>
