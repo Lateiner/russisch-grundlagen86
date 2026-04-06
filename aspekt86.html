@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aspekt-Memory: Russisch</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --bg-color: #f8f9fa;
+            --card-back: #2c3e50;
+            --card-front: #ffffff;
+            --success-color: #27ae60;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.4rem; color: var(--primary-color); }
+        p.desc { color: #666; margin-bottom: 20px; }
+
+        /* Memory Grid */
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            perspective: 1000px;
+        }
+
+        @media (min-width: 400px) {
+            .memory-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        @media (min-width: 600px) {
+            .memory-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        /* Card Styling */
+        .memory-card {
+            height: 100px;
+            position: relative;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.5s;
+        }
+
+        .memory-card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .memory-card.matched {
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s 0.5s, opacity 0.5s linear;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            padding: 5px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .card-back {
+            background-color: var(--card-back);
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .card-front {
+            background-color: var(--card-front);
+            color: var(--primary-color);
+            transform: rotateY(180deg);
+            border: 2px solid var(--secondary-color);
+            flex-direction: column;
+        }
+
+        .aspekt-label {
+            font-size: 0.6rem;
+            color: #888;
+            margin-top: 5px;
+            text-transform: uppercase;
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-restart { background: #bdc3c7; color: #333; }
+        .btn-solution { background: var(--secondary-color); color: white; }
+
+        #win-msg {
+            display: none;
+            color: var(--success-color);
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Aspekt-Memory</h1>
+    <p class="desc">Finde die Paare: unvollendet (НСВ) & vollendet (СВ).</p>
+    
+    <div id="win-msg">Hervorragend! Alle Paare gefunden.</div>
+
+    <div class="memory-grid" id="grid"></div>
+
+    <div class="controls">
+        <button class="btn-restart" onclick="initGame()">Neustart</button>
+        <button class="btn-solution" onclick="showSolution()">Lösung</button>
+    </div>
+</div>
+
+<script>
+    const pairs = [
+        { id: 1, nsv: "ВЫЯВЛЯТЬ", sv: "ВЫЯВИТЬ", color: "#FFD1DC" },
+        { id: 2, nsv: "ОБЪЯВЛЯТЬ", sv: "ОБЪЯВИТЬ", color: "#C1E1C1" },
+        { id: 3, nsv: "ЗАЯВЛЯТЬ", sv: "ЗАЯВИТЬ", color: "#B3E5FC" },
+        { id: 4, nsv: "СООБЩАТЬ", sv: "СООБЩИТЬ", color: "#FDFD96" }
+    ];
+
+    let cards = [];
+    let flippedCards = [];
+    let matchedCount = 0;
+    let lockBoard = false;
+
+    function initGame() {
+        const grid = document.getElementById('grid');
+        const winMsg = document.getElementById('win-msg');
+        grid.innerHTML = '';
+        winMsg.style.display = 'none';
+        matchedCount = 0;
+        flippedCards = [];
+        lockBoard = false;
+        
+        // Karten-Array erstellen (jeweils NSV und SV pro Paar)
+        cards = [];
+        pairs.forEach(p => {
+            cards.push({ id: p.id, text: p.nsv, type: 'НСВ', color: p.color });
+            cards.push({ id: p.id, text: p.sv, type: 'СВ', color: p.color });
+        });
+
+        // Mischen
+        cards.sort(() => Math.random() - 0.5);
+
+        // Grid erstellen
+        cards.forEach((card, index) => {
+            const cardEl = document.createElement('div');
+            cardEl.className = 'memory-card';
+            cardEl.dataset.id = card.id;
+            cardEl.dataset.index = index;
+            cardEl.innerHTML = `
+                <div class="card-face card-back">?</div>
+                <div class="card-face card-front">
+                    ${card.text}
+                    <span class="aspekt-label">${card.type}</span>
+                </div>
+            `;
+            cardEl.onclick = () => flipCard(cardEl);
+            grid.appendChild(cardEl);
+        });
+    }
+
+    function flipCard(card) {
+        if (lockBoard || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+        card.classList.add('flipped');
+        flippedCards.push(card);
+
+        if (flippedCards.length === 2) {
+            checkMatch();
+        }
+    }
+
+    function checkMatch() {
+        const [card1, card2] = flippedCards;
+        const isMatch = card1.dataset.id === card2.dataset.id;
+
+        if (isMatch) {
+            setTimeout(() => {
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matchedCount++;
+                flippedCards = [];
+                if (matchedCount === pairs.length) {
+                    document.getElementById('win-msg').style.display = 'block';
+                }
+            }, 600);
+        } else {
+            lockBoard = true;
+            setTimeout(() => {
+                card1.classList.remove('flipped');
+                card2.classList.remove('flipped');
+                flippedCards = [];
+                lockBoard = false;
+            }, 1000);
+        }
+    }
+
+    function showSolution() {
+        const allCards = document.querySelectorAll('.memory-card');
+        allCards.forEach(card => {
+            if (!card.classList.contains('matched')) {
+                const cardData = cards[card.dataset.index];
+                card.querySelector('.card-front').style.backgroundColor = cardData.color;
+                card.classList.add('flipped');
+            }
+        });
+
+        setTimeout(() => {
+            allCards.forEach(card => card.classList.add('matched'));
+            matchedCount = pairs.length;
+            document.getElementById('win-msg').style.display = 'block';
+        }, 2000);
+    }
+
+    window.onload = initGame;
+</script>
+
+</body>
+</html>
