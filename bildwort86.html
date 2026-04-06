@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bild-Wort-Verknüpfung: 10 Beispiele</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #1b5e20; /* Kräftiges Grün */
+            --error-color: #c62828;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.4rem; color: var(--primary-color); margin-bottom: 5px; }
+        .progress { color: #888; font-size: 0.9rem; margin-bottom: 20px; font-weight: bold; }
+
+        .visual-card {
+            background: #fff;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
+        }
+
+        .icon-display {
+            font-size: 5rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .situation-text {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .options-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 400px) {
+            .options-container { grid-template-columns: 1fr; }
+        }
+
+        .option-btn {
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--primary-color);
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--secondary-color);
+            background: #f0f7ff;
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-color) !important;
+            color: white !important;
+            border-color: var(--success-color) !important;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error-color) !important;
+            color: white !important;
+            border-color: var(--error-color) !important;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .nav-btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            background: #95a5a6;
+            color: white;
+        }
+
+        #next-btn { background: var(--primary-color); display: none; }
+
+        #final-msg {
+            display: none;
+            font-size: 1.3rem;
+            color: var(--success-color);
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>ЗАЯВЛЕНИЕ oder ЗАЯВКА?</h1>
+    <div class="progress" id="progress">Lade...</div>
+
+    <div id="quiz-area">
+        <div class="visual-card">
+            <span class="icon-display" id="icon">❓</span>
+            <div class="situation-text" id="situation">Wähle die richtige Kategorie.</div>
+        </div>
+
+        <div class="options-container" id="options"></div>
+    </div>
+
+    <div id="final-msg">Hervorragend! Du hast alle 10 Situationen gemeistert.</div>
+
+    <div class="controls">
+        <button class="nav-btn" onclick="restartQuiz()">Neustart</button>
+        <button class="nav-btn" onclick="showSolution()">Lösung</button>
+        <button class="nav-btn" id="next-btn" onclick="nextQuestion()">Weiter</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        { icon: "💡", text: "Das Licht im Treppenhaus ist kaputt. Ein Elektriker muss kommen.", correct: "ЗАЯВКА" },
+        { icon: "🚲", text: "Dein Fahrrad wurde gestohlen. Du erstattest Anzeige bei der Polizei.", correct: "ЗАЯВЛЕНИЕ" },
+        { icon: "💼", text: "Du möchtest deinen Job kündigen und reichst das Dokument ein.", correct: "ЗАЯВЛЕНИЕ" },
+        { icon: "🛗", text: "Der Aufzug steckt fest. Du forderst Hilfe über die App an.", correct: "ЗАЯВКА" },
+        { icon: "🌴", text: "Du reichst bei der Personalabteilung deinen Urlaubsantrag ein.", correct: "ЗАЯВЛЕНИЕ" },
+        { icon: "🌐", text: "Du beantragst einen neuen Internet- und Telefonanschluss.", correct: "ЗАЯВКА" },
+        { icon: "💍", text: "Du möchtest heiraten und gibst die Dokumente beim Standesamt ab.", correct: "ЗАЯВЛЕНИЕ" },
+        { icon: "🚰", text: "Ein Rohr ist gebrochen. Du forderst dringend einen Klempner an.", correct: "ЗАЯВКА" },
+        { icon: "📱", text: "Du hast dein Handy verloren und meldest den Verlust offiziell.", correct: "ЗАЯВЛЕНИЕ" },
+        { icon: "🖊️", text: "Du arbeitest im Büro und bestellst neue Stifte und Papier.", correct: "ЗАЯВКА" }
+    ];
+
+    let currentIdx = 0;
+    let shuffledQuestions = [];
+    let answered = false;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initQuiz() {
+        shuffledQuestions = shuffle([...questions]);
+        currentIdx = 0;
+        document.getElementById('final-msg').style.display = 'none';
+        document.getElementById('quiz-area').style.display = 'block';
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        answered = false;
+        const q = shuffledQuestions[currentIdx];
+        document.getElementById('progress').textContent = `Situation ${currentIdx + 1} von 10`;
+        document.getElementById('icon').textContent = q.icon;
+        document.getElementById('situation').textContent = q.text;
+
+        const options = shuffle(["ЗАЯВЛЕНИЕ", "ЗАЯВКА"]);
+        const container = document.getElementById('options');
+        container.innerHTML = '';
+
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt;
+            btn.onclick = () => checkAnswer(btn, opt);
+            container.appendChild(btn);
+        });
+
+        document.getElementById('next-btn').style.display = 'none';
+    }
+
+    function checkAnswer(btn, choice) {
+        if (answered) return;
+        answered = true;
+        const correct = shuffledQuestions[currentIdx].correct;
+
+        if (choice === correct) {
+            btn.classList.add('correct');
+        } else {
+            btn.classList.add('wrong');
+            Array.from(document.querySelectorAll('.option-btn')).forEach(b => {
+                if (b.textContent === correct) b.classList.add('correct');
+            });
+        }
+
+        Array.from(document.querySelectorAll('.option-btn')).forEach(b => b.disabled = true);
+        document.getElementById('next-btn').style.display = 'inline-block';
+    }
+
+    function nextQuestion() {
+        if (currentIdx < shuffledQuestions.length - 1) {
+            currentIdx++;
+            loadQuestion();
+        } else {
+            document.getElementById('quiz-area').style.display = 'none';
+            document.getElementById('final-msg').style.display = 'block';
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('progress').textContent = "Fertig!";
+        }
+    }
+
+    function showSolution() {
+        if (answered) return;
+        const correct = shuffledQuestions[currentIdx].correct;
+        Array.from(document.querySelectorAll('.option-btn')).forEach(b => {
+            if (b.textContent === correct) b.classList.add('correct');
+            b.disabled = true;
+        });
+        answered = true;
+        document.getElementById('next-btn').style.display = 'inline-block';
+    }
+
+    function restartQuiz() {
+        initQuiz();
+    }
+
+    window.onload = initQuiz;
+</script>
+
+</body>
+</html>
