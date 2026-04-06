@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register-Check: Offiziell vs. Informell</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #1b5e20; /* Kräftiges Grün */
+            --error-color: #c62828;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 650px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.5rem; color: var(--primary-color); margin-bottom: 5px; }
+        .progress { color: #888; font-size: 0.9rem; margin-bottom: 25px; font-weight: bold; }
+
+        /* Satz-Karte */
+        .sentence-card {
+            background: #f9f9f9;
+            border-top: 4px solid var(--secondary-color);
+            padding: 25px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .sentence-text {
+            font-size: 1.3rem;
+            color: #333;
+            line-height: 1.4;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .translation {
+            font-size: 0.95rem;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Register Buttons */
+        .register-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .reg-btn {
+            padding: 18px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--primary-color);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .reg-btn .lang-label { font-size: 0.75rem; color: #888; text-transform: uppercase; }
+
+        .reg-btn:hover:not(:disabled) {
+            border-color: var(--secondary-color);
+            background: #f0f7ff;
+        }
+
+        .reg-btn.correct {
+            background-color: var(--success-color) !important;
+            color: white !important;
+            border-color: var(--success-color) !important;
+            opacity: 1 !important;
+        }
+        .reg-btn.correct .lang-label { color: #ccc; }
+
+        .reg-btn.wrong {
+            background-color: var(--error-color) !important;
+            color: white !important;
+            border-color: var(--error-color) !important;
+        }
+        .reg-btn.wrong .lang-label { color: #ccc; }
+
+        /* Feedback Area */
+        #explanation {
+            display: none;
+            padding: 15px;
+            background: #fdfdfd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: #555;
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .nav-btn {
+            padding: 12px 22px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            background: #95a5a6;
+        }
+
+        #next-btn { background: var(--primary-color); display: none; }
+
+        #final-screen { display: none; padding: 20px; }
+        #final-screen h2 { color: var(--success-color); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="quiz-ui">
+        <h1>Register-Check</h1>
+        <div class="progress" id="progress">Lade Sätze...</div>
+
+        <div class="sentence-card">
+            <div class="sentence-text" id="sentence">Satz lädt...</div>
+            <div class="translation" id="translation">Übersetzung lädt...</div>
+        </div>
+
+        <div class="register-container">
+            <button class="reg-btn" id="btn-official" onclick="handleChoice('official')">
+                <span class="lang-label">Официальный</span>
+                Offiziell / Formell
+            </button>
+            <button class="reg-btn" id="btn-informal" onclick="handleChoice('informal')">
+                <span class="lang-label">Разговорный</span>
+                Informell / Alltag
+            </button>
+        </div>
+
+        <div id="explanation"></div>
+    </div>
+
+    <div id="final-screen">
+        <h2>Hervorragend!</h2>
+        <p>Du hast das Sprachgefühl für den offiziellen Stil (Verben wie <b>ВЫЯВИТЬ</b>) und den informellen Stil (Verben wie <b>НАЙТИ</b>) vertieft.</p>
+    </div>
+
+    <div class="controls">
+        <button class="nav-btn" onclick="restartQuiz()">Neustart</button>
+        <button class="nav-btn" onclick="showSolution()">Lösung</button>
+        <button class="nav-btn" id="next-btn" onclick="nextQuestion()">Nächster Satz</button>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        { s: "Проверка выявила ошибки в работе этой компании.", t: "Die Prüfung deckte Fehler in der Arbeit dieser Firma auf.", r: "official", e: "Offiziell: Das Verb ВЫЯВИТЬ wird fast ausschließlich im formellen/offiziellen Stil verwendet." },
+        { s: "Мама нашла мои ключи под столом.", t: "Mama hat meine Schlüssel unter dem Tisch gefunden.", r: "informal", e: "Informell: НАЙТИ ist das einfache, alltagssprachliche Synonym für 'finden'." },
+        { s: "Этот анализ помогает выявить серьёзное заболевание.", t: "Diese Analyse hilft, eine schwere Krankheit festzustellen.", r: "official", e: "Offiziell: Im medizinisch-offiziellen Kontext ist ВЫЯВИТЬ der Standard." },
+        { s: "Я просто сказал ему, что не приду.", t: "Ich habe ihm einfach gesagt, dass ich nicht komme.", r: "informal", e: "Informell: Eine einfache Mitteilung zwischen Freunden." },
+        { s: "Государство объявило о проведении конкурса.", t: "Der Staat kündigte die Durchführung eines Wettbewerbs an.", r: "official", e: "Offiziell: Behörden und Staaten ОБЪЯВЛЯЮТ (verkünden) Dinge offiziell." },
+        { s: "Посмотри, я нашёл классное видео на Ютубе!", t: "Schau mal, ich habe ein cooles Video auf YouTube gefunden!", r: "informal", e: "Informell: Alltagssprache unter Freunden." },
+        { s: "Президент объявил войnu законченной.", t: "Der Präsident erklärte den Krieg für beendet.", r: "official", e: "Offiziell: Eine staatsmännische Erklärung (ОБЪЯВИТЬ)." },
+        { s: "Директор официально заявил о своём увольнении.", t: "Der Direktor erklärte offiziell seinen Rücktritt.", r: "official", e: "Offiziell: Ein formeller Akt im Arbeitsumfeld (ЗАЯВИТЬ)." },
+        { s: "Друг сообщил мне результаты по СМС.", t: "Der Freund hat mir die Ergebnisse per SMS mitgeteilt.", r: "informal", e: "Informell: СООБЩИТЬ ist zwar korrekt, aber im privaten Kontext (per SMS) informell." },
+        { s: "Вчера студентам официально объявили результаты.", t: "Gestern wurden den Studenten offiziell die Ergebnisse verkündet.", r: "official", e: "Offiziell: Eine formelle Bekanntgabe an der Universität." }
+    ];
+
+    let currentIdx = 0;
+    let shuffledData = [];
+    let answered = false;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initQuiz() {
+        shuffledData = shuffle([...quizData]);
+        currentIdx = 0;
+        document.getElementById('final-screen').style.display = 'none';
+        document.getElementById('quiz-ui').style.display = 'block';
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        answered = false;
+        const q = shuffledData[currentIdx];
+        document.getElementById('progress').textContent = `Satz ${currentIdx + 1} von ${shuffledData.length}`;
+        document.getElementById('sentence').textContent = q.s;
+        document.getElementById('translation').textContent = q.t;
+        
+        const btnOff = document.getElementById('btn-official');
+        const btnInf = document.getElementById('btn-informal');
+        btnOff.className = 'reg-btn';
+        btnInf.className = 'reg-btn';
+        btnOff.disabled = false;
+        btnInf.disabled = false;
+
+        document.getElementById('explanation').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'none';
+    }
+
+    function handleChoice(choice) {
+        if (answered) return;
+        answered = true;
+
+        const q = shuffledData[currentIdx];
+        const btnOff = document.getElementById('btn-official');
+        const btnInf = document.getElementById('btn-informal');
+        const expDiv = document.getElementById('explanation');
+
+        btnOff.disabled = true;
+        btnInf.disabled = true;
+
+        const correctBtn = (q.r === 'official') ? btnOff : btnInf;
+        const wrongBtn = (q.r === 'official') ? btnInf : btnOff;
+
+        if (choice === q.r) {
+            correctBtn.classList.add('correct');
+        } else {
+            wrongBtn.classList.add('wrong');
+            correctBtn.classList.add('correct');
+        }
+
+        expDiv.innerHTML = `<strong>Analyse:</strong> ${q.e}`;
+        expDiv.style.display = 'block';
+
+        document.getElementById('next-btn').style.display = 'inline-block';
+    }
+
+    function nextQuestion() {
+        if (currentIdx < shuffledData.length - 1) {
+            currentIdx++;
+            loadQuestion();
+        } else {
+            document.getElementById('quiz-ui').style.display = 'none';
+            document.getElementById('final-screen').style.display = 'block';
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('progress').textContent = "Abgeschlossen";
+        }
+    }
+
+    function showSolution() {
+        if (answered) return;
+        handleChoice(shuffledData[currentIdx].r);
+    }
+
+    function restartQuiz() {
+        initQuiz();
+    }
+
+    window.onload = initQuiz;
+</script>
+
+</body>
+</html>
