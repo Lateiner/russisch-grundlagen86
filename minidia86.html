@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Chat: Mini-Dialoge</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #1b5e20; /* Kräftiges Waldgrün */
+            --error-color: #c62828;
+            --bg-color: #e5ddd5; /* Klassischer Chat-Hintergrund */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .phone-container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        header {
+            background: #075e54;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .chat-area {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Sprechblasen */
+        .bubble {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            line-height: 1.4;
+            position: relative;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .bubble.left {
+            align-self: flex-start;
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 2px;
+        }
+
+        .bubble.right {
+            align-self: flex-end;
+            background: #dcf8c6;
+            color: #333;
+            border-bottom-right-radius: 2px;
+        }
+
+        .bubble.correct {
+            background-color: var(--success-color) !important;
+            color: white !important;
+        }
+
+        .bubble.wrong {
+            background-color: var(--error-color) !important;
+            color: white !important;
+        }
+
+        /* Antwortbereich */
+        .options-area {
+            background: #f0f0f0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .option-btn {
+            background: white;
+            border: 1px solid #ccc;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            text-align: left;
+            transition: background 0.2s;
+        }
+
+        .option-btn:hover:not(:disabled) { background: #e3f2fd; border-color: var(--secondary-color); }
+        .option-btn:disabled { cursor: default; }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            background: white;
+        }
+
+        .nav-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: var(--primary-color);
+            color: white;
+            font-weight: bold;
+        }
+
+        #next-btn { background: var(--secondary-color); display: none; }
+
+        .progress-text { font-size: 0.8rem; color: #666; margin-bottom: 5px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="phone-container">
+    <header>Russisch-Übung: Chat</header>
+    
+    <div class="chat-area" id="chat-window">
+        <!-- Hier erscheinen die Chat-Nachrichten -->
+    </div>
+
+    <div class="progress-text" id="progress">Dialog 1 von 6</div>
+
+    <div class="options-area" id="options">
+        <!-- Hier erscheinen die Antwortmöglichkeiten -->
+    </div>
+
+    <div class="controls">
+        <button class="nav-btn" onclick="restartQuiz()">Neustart</button>
+        <button class="nav-btn" onclick="showSolution()">Lösung</button>
+        <button class="nav-btn" id="next-btn" onclick="nextDialog()">Weiter</button>
+    </div>
+</div>
+
+<script>
+    const dialogData = [
+        {
+            incoming: "Слушай, у нас в доме лифт не работает. Что делать?",
+            options: [
+                "Надо сделать ЗАЯВКУ через приложение.",
+                "Тебе нужно написать заявление в полицию.",
+                "Подай объявление в газету об этом."
+            ],
+            correct: 0
+        },
+        {
+            incoming: "У меня в метро украли кошелёк! Я в панике!",
+            options: [
+                "Тебе нужно срочно сделать заявку.",
+                "Иди в полицию и напиши ЗАЯВЛЕНИЕ о краже.",
+                "Просто сделай об этом объявление на столбе."
+            ],
+            correct: 1
+        },
+        {
+            incoming: "Ты слышал? Результаты экзаменов уже известны?",
+            options: [
+                "Да, их сегодня официально ОБЪЯВИЛИ студентам.",
+                "Да, их выявили в газете сегодня.",
+                "Да, их заявили в полицию."
+            ],
+            correct: 0
+        },
+        {
+            incoming: "Как прошла проверка в компании вашего друга?",
+            options: [
+                "Она ВЫЯВИЛА много ошибок в документах.",
+                "Она объявила новые ошибки в работе.",
+                "Она сделала заявку на проверку ошибок."
+            ],
+            correct: 0
+        },
+        {
+            incoming: "Мне нужно срочно продать старый диван. Как это сделать?",
+            options: [
+                "Напиши заявление об этом директору.",
+                "Подай ОБЪЯВЛЕНИЕ в интернет.",
+                "Сделай заявку на ремонт дивана."
+            ],
+            correct: 1
+        },
+        {
+            incoming: "Почему все говорят о директоре? Что-то случилось?",
+            options: [
+                "Да, он официально ЗАЯВИЛ о своём увольнении.",
+                "Да, он выявил объявление на двери.",
+                "Да, он сделал заявку на увольнение всех."
+            ],
+            correct: 0
+        }
+    ];
+
+    let currentIdx = 0;
+    let shuffledDialogs = [];
+    let answered = false;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initQuiz() {
+        shuffledDialogs = shuffle([...dialogData]);
+        currentIdx = 0;
+        loadDialog();
+    }
+
+    function loadDialog() {
+        answered = false;
+        const d = shuffledDialogs[currentIdx];
+        const chatWindow = document.getElementById('chat-window');
+        const optionsDiv = document.getElementById('options');
+        
+        chatWindow.innerHTML = '';
+        optionsDiv.innerHTML = '';
+        document.getElementById('next-btn').style.display = 'none';
+        document.getElementById('progress').textContent = `Dialog ${currentIdx + 1} von ${shuffledDialogs.length}`;
+
+        // Linke Blase (Eingehend)
+        const leftBubble = document.createElement('div');
+        leftBubble.className = 'bubble left';
+        leftBubble.textContent = d.incoming;
+        chatWindow.appendChild(leftBubble);
+
+        // Optionen mischen
+        let opts = d.options.map((text, idx) => ({ text, isCorrect: idx === d.correct }));
+        opts = shuffle(opts);
+
+        opts.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt.text;
+            btn.onclick = () => checkAnswer(opt.isCorrect, opt.text);
+            optionsDiv.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(isCorrect, text) {
+        if (answered) return;
+        answered = true;
+
+        const chatWindow = document.getElementById('chat-window');
+        const rightBubble = document.createElement('div');
+        rightBubble.className = 'bubble right';
+        rightBubble.textContent = text;
+        
+        if (isCorrect) {
+            rightBubble.classList.add('correct');
+        } else {
+            rightBubble.classList.add('wrong');
+            // Richtige Antwort anzeigen
+            const correctText = shuffledDialogs[currentIdx].options[shuffledDialogs[currentIdx].correct];
+            setTimeout(() => {
+                const solutionBubble = document.createElement('div');
+                solutionBubble.className = 'bubble left';
+                solutionBubble.style.backgroundColor = '#fff';
+                solutionBubble.style.border = '2px solid var(--success-color)';
+                solutionBubble.innerHTML = `<b>Korrekt wäre:</b><br>${correctText}`;
+                chatWindow.appendChild(solutionBubble);
+            }, 500);
+        }
+
+        chatWindow.appendChild(rightBubble);
+        document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+        document.getElementById('next-btn').style.display = 'inline-block';
+        
+        // Nach unten scrollen
+        setTimeout(() => chatWindow.scrollTop = chatWindow.scrollHeight, 100);
+    }
+
+    function nextDialog() {
+        if (currentIdx < shuffledDialogs.length - 1) {
+            currentIdx++;
+            loadDialog();
+        } else {
+            alert("Hervorragend! Du hast alle Chat-Dialoge gemeistert.");
+            restartQuiz();
+        }
+    }
+
+    function showSolution() {
+        if (answered) return;
+        const correctText = shuffledDialogs[currentIdx].options[shuffledDialogs[currentIdx].correct];
+        checkAnswer(true, correctText);
+    }
+
+    function restartQuiz() {
+        initQuiz();
+    }
+
+    window.onload = initQuiz;
+</script>
+
+</body>
+</html>
