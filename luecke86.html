@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kontext-Check: Mischen & Üben</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 650px;
+            width: 100%;
+        }
+
+        h1 { font-size: 1.4rem; color: var(--primary-color); text-align: center; margin-bottom: 5px; }
+        .progress { text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 20px; }
+
+        .question-box {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-left: 5px solid var(--secondary-color);
+        }
+
+        .sentence {
+            font-size: 1.25rem;
+            line-height: 1.6;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .gap {
+            display: inline-block;
+            min-width: 100px;
+            border-bottom: 2px dashed var(--secondary-color);
+            color: var(--secondary-color);
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .translation {
+            font-style: italic;
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        @media (min-width: 480px) {
+            .options-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .option-btn {
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--secondary-color);
+            background: #f0f7ff;
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-color) !important;
+            color: white !important;
+            border-color: var(--success-color) !important;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error-color) !important;
+            color: white !important;
+            border-color: var(--error-color) !important;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            background: #95a5a6;
+            color: white;
+            min-width: 120px;
+        }
+
+        #next-btn { background: var(--primary-color); display: none; }
+        
+        #final-msg {
+            display: none;
+            text-align: center;
+            color: var(--success-color);
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Kontext-Check</h1>
+    <div class="progress" id="progress">Lade Fragen...</div>
+
+    <div id="quiz-area">
+        <div class="question-box">
+            <div class="sentence" id="sentence"></div>
+            <div class="translation" id="translation"></div>
+        </div>
+
+        <div class="options-grid" id="options"></div>
+    </div>
+
+    <div id="final-msg">Wunderbar! Du hast alle Fragen beantwortet.</div>
+
+    <div class="controls">
+        <button class="nav-btn" onclick="restartQuiz()">Neustart</button>
+        <button class="nav-btn" onclick="showSolution()">Lösung</button>
+        <button class="nav-btn" id="next-btn" onclick="nextQuestion()">Weiter</button>
+    </div>
+</div>
+
+<script>
+    const rawQuestions = [
+        {
+            text: "Проверка _______ ошибки в работе компании.",
+            correct: "выявила",
+            translation: "Die Prüfung deckte Fehler in der Arbeit der Firma auf.",
+            distractors: ["объявила", "заявила"]
+        },
+        {
+            text: "Вчера студентам _______ результаты экзаменов.",
+            correct: "объявили",
+            translation: "Gestern wurden den Studenten die Prüfungsergebnisse bekannt gegeben.",
+            distractors: ["выявили", "заявили"]
+        },
+        {
+            text: "Директор официально _______ о своём увольнении.",
+            correct: "заявил",
+            translation: "Der Direktor hat offiziell seinen Rücktritt erklärt.",
+            distractors: ["выявил", "объявил"]
+        },
+        {
+            text: "Этот анализ помогает _______ болезнь на ранней стадии.",
+            correct: "выявить",
+            translation: "Diese Analyse hilft, die Krankheit im Frühstadium festzustellen.",
+            distractors: ["объявить", "заявить"]
+        },
+        {
+            text: "Президент _______ войну законченной.",
+            correct: "объявил",
+            translation: "Der Präsident erklärte den Krieg für beendet.",
+            distractors: ["выявил", "заявил"]
+        },
+        {
+            text: "Нужно позвонить в полицию и _______ о краже.",
+            correct: "заявить",
+            translation: "Man muss die Polizei anrufen und einen Diebstahl melden.",
+            distractors: ["выявить", "объявить"]
+        }
+    ];
+
+    let quizQuestions = [];
+    let currentIdx = 0;
+    let answered = false;
+
+    // Hilfsfunktion zum Mischen
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function initQuiz() {
+        quizQuestions = shuffle([...rawQuestions]);
+        currentIdx = 0;
+        document.getElementById('final-msg').style.display = 'none';
+        document.getElementById('quiz-area').style.display = 'block';
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        answered = false;
+        const q = quizQuestions[currentIdx];
+        document.getElementById('progress').textContent = `Satz ${currentIdx + 1} von ${quizQuestions.length}`;
+        
+        document.getElementById('sentence').innerHTML = q.text.replace("_______", '<span class="gap">_______</span>');
+        document.getElementById('translation').textContent = q.translation;
+
+        // Optionen mischen (Richtig + Falsch)
+        const allOptions = shuffle([q.correct, ...q.distractors]);
+
+        const optionsDiv = document.getElementById('options');
+        optionsDiv.innerHTML = '';
+        allOptions.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt;
+            btn.onclick = () => checkAnswer(btn, opt);
+            optionsDiv.appendChild(btn);
+        });
+
+        document.getElementById('next-btn').style.display = 'none';
+    }
+
+    function checkAnswer(btn, choice) {
+        if (answered) return;
+        
+        const correct = quizQuestions[currentIdx].correct;
+        answered = true;
+
+        document.querySelector('.gap').textContent = correct;
+
+        if (choice === correct) {
+            btn.classList.add('correct');
+        } else {
+            btn.classList.add('wrong');
+            Array.from(document.querySelectorAll('.option-btn')).forEach(b => {
+                if (b.textContent === correct) b.classList.add('correct');
+            });
+        }
+
+        Array.from(document.querySelectorAll('.option-btn')).forEach(b => b.disabled = true);
+        document.getElementById('next-btn').style.display = 'block';
+    }
+
+    function nextQuestion() {
+        if (currentIdx < quizQuestions.length - 1) {
+            currentIdx++;
+            loadQuestion();
+        } else {
+            document.getElementById('quiz-area').style.display = 'none';
+            document.getElementById('progress').textContent = "Abgeschlossen";
+            document.getElementById('final-msg').style.display = 'block';
+            document.getElementById('next-btn').style.display = 'none';
+        }
+    }
+
+    function restartQuiz() {
+        initQuiz();
+    }
+
+    function showSolution() {
+        if (answered) return;
+        const correct = quizQuestions[currentIdx].correct;
+        
+        Array.from(document.querySelectorAll('.option-btn')).forEach(b => {
+            if (b.textContent === correct) b.classList.add('correct');
+            b.disabled = true;
+        });
+        
+        document.querySelector('.gap').textContent = correct;
+        answered = true;
+        document.getElementById('next-btn').style.display = 'block';
+    }
+
+    window.onload = initQuiz;
+</script>
+
+</body>
+</html>
