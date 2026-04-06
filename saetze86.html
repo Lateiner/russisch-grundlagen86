@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logik-Check: Satz-Vervollständigung</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #1b5e20; /* Kräftiges Grün */
+            --error-color: #c62828;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 700px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.5rem; color: var(--primary-color); margin-bottom: 10px; }
+        .progress { color: #888; font-size: 0.9rem; margin-bottom: 25px; font-weight: bold; }
+
+        /* Satz-Anfang Karte */
+        .logic-card {
+            background: #f9f9f9;
+            border-left: 6px solid var(--secondary-color);
+            padding: 25px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            text-align: left;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .if-clause {
+            font-size: 1.25rem;
+            color: #333;
+            line-height: 1.4;
+            font-weight: 500;
+        }
+
+        .then-label {
+            display: block;
+            margin-top: 10px;
+            color: var(--secondary-color);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        /* Antwort-Optionen */
+        .options-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .option-btn {
+            padding: 18px;
+            font-size: 1.1rem;
+            text-align: left;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1.4;
+            color: var(--primary-color);
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--secondary-color);
+            background: #f0f7ff;
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-color) !important;
+            color: white !important;
+            border-color: var(--success-color) !important;
+            opacity: 1 !important;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error-color) !important;
+            color: white !important;
+            border-color: var(--error-color) !important;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .nav-btn {
+            padding: 12px 22px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            background: #95a5a6;
+        }
+
+        #next-btn { background: var(--primary-color); display: none; }
+
+        #final-screen { display: none; padding: 20px; }
+        #final-screen h2 { color: var(--success-color); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="quiz-ui">
+        <h1>Logik-Check</h1>
+        <div class="progress" id="progress">Frage 1 von 8</div>
+
+        <div class="logic-card">
+            <div class="if-clause" id="sentence-start">Satz lädt...</div>
+            <span class="then-label">то... (dann...)</span>
+        </div>
+
+        <div class="options-container" id="options">
+            <!-- Buttons werden hier geladen -->
+        </div>
+    </div>
+
+    <div id="final-screen">
+        <h2>Hervorragend!</h2>
+        <p>Du hast alle logischen Verknüpfungen rund um <b>ОБЪЯВЛЕНИЕ</b>, <b>ЗАЯВЛЕНИЕ</b> und <b>ЗАЯВКА</b> korrekt vervollständigt.</p>
+    </div>
+
+    <div class="controls">
+        <button class="nav-btn" onclick="restartQuiz()">Neustart</button>
+        <button class="nav-btn" onclick="showSolution()">Lösung</button>
+        <button class="nav-btn" id="next-btn" onclick="nextQuestion()">Weiter</button>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        {
+            start: "Если вы подаёте <b>ОБЪЯВЛЕНИЕ</b> в газету,",
+            options: [
+                "...вы хотите что-то продать oder eine Wohnung suchen.",
+                "...вы официально сообщаете полиции о краже.",
+                "...вы официально увольняетесь с работы."
+            ],
+            correct: 0
+        },
+        {
+            start: "Если в полиции у вас принимают <b>ЗАЯВЛЕНИЕ</b>,",
+            options: [
+                "...значит, они будут рассматривать вашу проблему (например, кражу).",
+                "...значит, они хотят купить у вас газету.",
+                "...значит, они чинят лифт в вашем доме."
+            ],
+            correct: 0
+        },
+        {
+            start: "Если в вашем доме не работает лифт, вы делаете <b>ЗАЯВКУ</b>,",
+            options: [
+                "...чтобы пришёл мастер и починил его.",
+                "...чтобы президент объявил войну законченной.",
+                "...чтобы подать объявление в газету."
+            ],
+            correct: 0
+        },
+        {
+            start: "Если анализ помог <b>ВЫЯВИТЬ</b> болезнь,",
+            options: [
+                "...врач нашёл причину плохого самочувствия и может начать лечение.",
+                "...вы должны написать заявление об увольнении.",
+                "...вы вешаете объявление на улице."
+            ],
+            correct: 0
+        },
+        {
+            start: "Если директор <b>ЗАЯВИЛ</b> о своём увольнении,",
+            options: [
+                "...он официально сообщил всем, что уходит с работы.",
+                "...он просто потерял свои ключи и ищет их.",
+                "...он сделал заявку на ремонт компьютера."
+            ],
+            correct: 0
+        },
+        {
+            start: "Если президент <b>ОБЪЯВИЛ</b> войну законченной,",
+            options: [
+                "...это официальное сообщение для всей страны и мира.",
+                "...он подаёт объявление о поиске новой работы.",
+                "...он пишет заявление о краже телефона."
+            ],
+            correct: 0
+        },
+        {
+            start: "Если вы видите <b>ОБЪЯВЛЕНИЕ</b> на столбе,",
+            options: [
+                "...кто-то сообщает информацию (например, о потере собаки).",
+                "...полиция просит вас написать заявление о краже.",
+                "...вас просят рассмотреть заявку на ремонт лифта."
+            ],
+            correct: 0
+        },
+        {
+            start: "Если проверка <b>ВЫЯВИЛА</b> ошибки в работе компании,",
+            options: [
+                "...инспектор нашёл проблемы, которые нужно исправить.",
+                "...директор должен объявить результаты экзаменов.",
+                "...компания подаёт заявку на новый интернет."
+            ],
+            correct: 0
+        }
+    ];
+
+    let currentIdx = 0;
+    let shuffledData = [];
+    let answered = false;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initQuiz() {
+        shuffledData = shuffle([...quizData]);
+        currentIdx = 0;
+        document.getElementById('final-screen').style.display = 'none';
+        document.getElementById('quiz-ui').style.display = 'block';
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        answered = false;
+        const q = shuffledData[currentIdx];
+        document.getElementById('progress').textContent = `Frage ${currentIdx + 1} von ${shuffledData.length}`;
+        document.getElementById('sentence-start').innerHTML = q.start;
+        
+        const container = document.getElementById('options');
+        container.innerHTML = '';
+
+        // Antwortmöglichkeiten mischen und dabei den Index der richtigen Antwort tracken
+        let optionsWithMeta = q.options.map((text, idx) => ({ text, isCorrect: idx === q.correct }));
+        optionsWithMeta = shuffle(optionsWithMeta);
+
+        optionsWithMeta.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt.text;
+            btn.onclick = () => handleChoice(btn, opt.isCorrect);
+            container.appendChild(btn);
+        });
+
+        document.getElementById('next-btn').style.display = 'none';
+    }
+
+    function handleChoice(btn, isCorrect) {
+        if (answered) return;
+        answered = true;
+
+        if (isCorrect) {
+            btn.classList.add('correct');
+        } else {
+            btn.classList.add('wrong');
+            // Richtige Antwort markieren
+            Array.from(document.querySelectorAll('.option-btn')).forEach(b => {
+                // Wir suchen den Button, der die richtige Antwort (vom Datenmodell) enthält
+                const q = shuffledData[currentIdx];
+                if (b.textContent === q.options[q.correct]) {
+                    b.classList.add('correct');
+                }
+            });
+        }
+
+        document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+        document.getElementById('next-btn').style.display = 'inline-block';
+    }
+
+    function nextQuestion() {
+        if (currentIdx < shuffledData.length - 1) {
+            currentIdx++;
+            loadQuestion();
+        } else {
+            document.getElementById('quiz-ui').style.display = 'none';
+            document.getElementById('final-screen').style.display = 'block';
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('progress').textContent = "Abgeschlossen";
+        }
+    }
+
+    function showSolution() {
+        if (answered) return;
+        const q = shuffledData[currentIdx];
+        Array.from(document.querySelectorAll('.option-btn')).forEach(b => {
+            if (b.textContent === q.options[q.correct]) {
+                b.classList.add('correct');
+            }
+            b.disabled = true;
+        });
+        answered = true;
+        document.getElementById('next-btn').style.display = 'inline-block';
+    }
+
+    function restartQuiz() {
+        initQuiz();
+    }
+
+    window.onload = initQuiz;
+</script>
+
+</body>
+</html>
