@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meme-Interpretation: Russisch</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #1b5e20; /* Kräftiges Grün */
+            --error-color: #c62828;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.4rem; color: var(--primary-color); margin-bottom: 5px; }
+        .progress { color: #888; font-size: 0.9rem; margin-bottom: 20px; font-weight: bold; }
+
+        /* Meme-Karten-Design */
+        .meme-box {
+            background: #000;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            color: white;
+            border: 4px solid #333;
+        }
+
+        .meme-image-placeholder {
+            width: 100%;
+            height: 200px;
+            background: #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            border-bottom: 2px solid #333;
+        }
+
+        .meme-text {
+            padding: 15px;
+            font-family: 'Impact', sans-serif;
+            font-size: 1.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            line-height: 1.2;
+        }
+
+        /* Antwort-Buttons */
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+
+        .option-btn {
+            padding: 15px;
+            font-size: 1rem;
+            text-align: left;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1.4;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--secondary-color);
+            background: #f0f7ff;
+        }
+
+        .option-btn.correct {
+            background-color: var(--success-color) !important;
+            color: white !important;
+            border-color: var(--success-color) !important;
+        }
+
+        .option-btn.wrong {
+            background-color: var(--error-color) !important;
+            color: white !important;
+            border-color: var(--error-color) !important;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .nav-btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            background: #95a5a6;
+            color: white;
+        }
+
+        #next-btn { background: var(--primary-color); display: none; }
+
+        #final-msg {
+            display: none;
+            font-size: 1.3rem;
+            color: var(--success-color);
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Meme-Interpretation</h1>
+    <div class="progress" id="progress">Meme 1 von 5</div>
+
+    <div id="quiz-area">
+        <div class="meme-box">
+            <div class="meme-image-placeholder" id="meme-icon">🏠</div>
+            <div class="meme-text" id="meme-caption">ЗАЯВИТЬ О ДОМАШНЕМ НАСИЛИИ</div>
+        </div>
+
+        <div class="options-container" id="options">
+            <!-- Buttons werden hier geladen -->
+        </div>
+    </div>
+
+    <div id="final-msg">Hervorragend! Du hast die Nuancen der Memes verstanden.</div>
+
+    <div class="controls">
+        <button class="nav-btn" onclick="restartQuiz()">Neustart</button>
+        <button class="nav-btn" onclick="showSolution()">Lösung</button>
+        <button class="nav-btn" id="next-btn" onclick="nextQuestion()">Weiter</button>
+    </div>
+</div>
+
+<script>
+    const memes = [
+        {
+            icon: "🏠",
+            caption: "ЗАЯВИТЬ О ДОМАШНЕМ НАСИЛИИ",
+            options: [
+                "Jemand verkündet zu Hause, dass er ein neues Hobby hat.",
+                "Jemand teilt offiziell mit, dass er zu Hause körperlich verletzt wird.",
+                "Jemand bittet seine Familie um Erlaubnis, spazieren zu gehen."
+            ],
+            correctIndex: 1
+        },
+        {
+            icon: "🕵️",
+            caption: "ЗАЯВИТЬ О КРАЖЕ",
+            options: [
+                "Jemand meldet der Polizei offiziell, dass ihm etwas gestohlen wurde.",
+                "Jemand erzählt einen Witz über Diebe.",
+                "Jemand kündigt an, dass er im Lotto gewonnen hat."
+            ],
+            correctIndex: 0
+        },
+        {
+            icon: "💼",
+            caption: "ДИРЕКТОР ЗАЯВИЛ ОБ УВОЛЬНЕНИИ",
+            options: [
+                "Der Direktor hat alle Mitarbeiter zum Essen eingeladen.",
+                "Der Direktor hat offiziell verkündet, dass er die Firma verlässt.",
+                "Der Direktor hat neue Computer für das Büro bestellt."
+            ],
+            correctIndex: 1
+        },
+        {
+            icon: "📢",
+            caption: "ОБЪЯВИТЬ РЕЗУЛЬТАТЫ ЭКЗАМЕНОВ",
+            options: [
+                "Die Studenten schreiben gerade ihre Prüfung.",
+                "Die Ergebnisse werden der Gruppe offiziell bekannt gegeben.",
+                "Ein Student sagt seinem Freund, dass er eine gute Note hat."
+            ],
+            correctIndex: 1
+        },
+        {
+            icon: "🕊️",
+            caption: "ОБЪЯВИТЬ ВОЙНУ ЗАКОНЧЕННОЙ",
+            options: [
+                "Ein Präsident meldet den Beginn eines neuen Krieges.",
+                "Ein Soldat kehrt heimlich nach Hause zurück.",
+                "Ein Staatsoberhaupt teilt offiziell mit, dass der Krieg vorbei ist."
+            ],
+            correctIndex: 2
+        }
+    ];
+
+    let currentIdx = 0;
+    let answered = false;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initQuiz() {
+        currentIdx = 0;
+        document.getElementById('final-msg').style.display = 'none';
+        document.getElementById('quiz-area').style.display = 'block';
+        loadMeme();
+    }
+
+    function loadMeme() {
+        answered = false;
+        const m = memes[currentIdx];
+        document.getElementById('progress').textContent = `Meme ${currentIdx + 1} von ${memes.length}`;
+        document.getElementById('meme-icon').textContent = m.icon;
+        document.getElementById('meme-caption').textContent = m.caption;
+
+        const container = document.getElementById('options');
+        container.innerHTML = '';
+
+        m.options.forEach((opt, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt;
+            btn.onclick = () => checkAnswer(btn, idx);
+            container.appendChild(btn);
+        });
+
+        document.getElementById('next-btn').style.display = 'none';
+    }
+
+    function checkAnswer(btn, choiceIdx) {
+        if (answered) return;
+        answered = true;
+        const correct = memes[currentIdx].correctIndex;
+
+        if (choiceIdx === correct) {
+            btn.classList.add('correct');
+        } else {
+            btn.classList.add('wrong');
+            Array.from(document.querySelectorAll('.option-btn'))[correct].classList.add('correct');
+        }
+
+        Array.from(document.querySelectorAll('.option-btn')).forEach(b => b.disabled = true);
+        document.getElementById('next-btn').style.display = 'inline-block';
+    }
+
+    function nextQuestion() {
+        if (currentIdx < memes.length - 1) {
+            currentIdx++;
+            loadMeme();
+        } else {
+            document.getElementById('quiz-area').style.display = 'none';
+            document.getElementById('final-msg').style.display = 'block';
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('progress').textContent = "Abgeschlossen";
+        }
+    }
+
+    function showSolution() {
+        if (answered) return;
+        const correct = memes[currentIdx].correctIndex;
+        Array.from(document.querySelectorAll('.option-btn'))[correct].classList.add('correct');
+        Array.from(document.querySelectorAll('.option-btn')).forEach(b => b.disabled = true);
+        answered = true;
+        document.getElementById('next-btn').style.display = 'inline-block';
+    }
+
+    function restartQuiz() {
+        initQuiz();
+    }
+
+    window.onload = initQuiz;
+</script>
+
+</body>
+</html>
