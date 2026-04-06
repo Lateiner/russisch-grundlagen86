@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kollokations-Check: ЗАЯВЛЕНИЕ</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #1b5e20; /* Das gewünschte kräftige Grün */
+            --error-color: #c62828;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 700px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.4rem; color: var(--primary-color); margin-bottom: 10px; }
+        p.desc { color: #666; margin-bottom: 25px; }
+
+        .target-word {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            background: #eee;
+            display: inline-block;
+            padding: 10px 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 2px solid #ddd;
+        }
+
+        .verb-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        @media (min-width: 500px) {
+            .verb-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .verb-btn {
+            padding: 15px 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #444;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .verb-btn .trans {
+            font-size: 0.75rem;
+            font-weight: normal;
+            color: #888;
+        }
+
+        .verb-btn:hover:not(.checked) {
+            border-color: var(--secondary-color);
+            background: #f0f7ff;
+        }
+
+        /* Kräftiges Grün für richtige Antworten */
+        .verb-btn.correct {
+            background-color: var(--success-color) !important;
+            color: white !important;
+            border-color: var(--success-color) !important;
+            cursor: default;
+        }
+        .verb-btn.correct .trans { color: #ddd; }
+
+        .verb-btn.wrong {
+            background-color: var(--error-color) !important;
+            color: white !important;
+            border-color: var(--error-color) !important;
+            cursor: default;
+        }
+        .verb-btn.wrong .trans { color: #ddd; }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            border-top: 1px solid #eee;
+            padding-top: 25px;
+        }
+
+        button.nav-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+        }
+
+        .btn-restart { background: #95a5a6; }
+        .btn-solution { background: var(--secondary-color); }
+
+        #score-msg {
+            margin-bottom: 15px;
+            font-weight: bold;
+            color: var(--success-color);
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Kollokations-Check</h1>
+    <p class="desc">Welche Verben passen zum Substantiv <b>ЗАЯВЛЕНИЕ</b>?<br>Klicke alle richtigen an.</p>
+
+    <div class="target-word">ЗАЯВЛЕНИЕ</div>
+
+    <div id="score-msg">Hervorragend! Du hast alle passenden Verben gefunden.</div>
+
+    <div class="verb-grid" id="verb-pool">
+        <!-- Verben werden per JS geladen -->
+    </div>
+
+    <div class="controls">
+        <button class="nav-btn btn-restart" onclick="initGame()">Neustart</button>
+        <button class="nav-btn btn-solution" onclick="showSolution()">Lösung anzeigen</button>
+    </div>
+</div>
+
+<script>
+    const verbs = [
+        { word: "ПОДАТЬ", trans: "einreichen", correct: true },
+        { word: "НАПИСАТЬ", trans: "schreiben", correct: true },
+        { word: "РАССМОТРЕТЬ", trans: "prüfen", correct: true },
+        { word: "ПОДПИСАТЬ", trans: "unterschreiben", correct: true },
+        { word: "ПРИНЯТЬ", trans: "annehmen", correct: true },
+        { word: "ОТОЗВАТЬ", trans: "zurückziehen", correct: true },
+        { word: "ВЫЯВИТЬ", trans: "feststellen", correct: false },
+        { word: "ОБЪЯВИТЬ", trans: "verkünden", correct: false },
+        { word: "ПОЧИНИТЬ", trans: "reparieren", correct: false },
+        { word: "ПОЗВОНИТЬ", trans: "anrufen", correct: false },
+        { word: "УВИДЕТЬ", trans: "sehen", correct: false },
+        { word: "СДЕЛАТЬ", trans: "machen", correct: false }
+    ];
+
+    let foundCount = 0;
+    const totalCorrect = verbs.filter(v => v.correct).length;
+
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    function initGame() {
+        const pool = document.getElementById('verb-pool');
+        const scoreMsg = document.getElementById('score-msg');
+        pool.innerHTML = '';
+        scoreMsg.style.display = 'none';
+        foundCount = 0;
+
+        const shuffledVerbs = shuffle([...verbs]);
+
+        shuffledVerbs.forEach(v => {
+            const btn = document.createElement('button');
+            btn.className = 'verb-btn';
+            btn.innerHTML = `${v.word} <span class="trans">${v.trans}</span>`;
+            btn.onclick = () => checkVerb(btn, v);
+            pool.appendChild(btn);
+        });
+    }
+
+    function checkVerb(btn, data) {
+        if (btn.classList.contains('checked')) return;
+
+        btn.classList.add('checked');
+
+        if (data.correct) {
+            btn.classList.add('correct');
+            foundCount++;
+            if (foundCount === totalCorrect) {
+                document.getElementById('score-msg').style.display = 'block';
+            }
+        } else {
+            btn.classList.add('wrong');
+        }
+    }
+
+    function showSolution() {
+        const buttons = document.querySelectorAll('.verb-btn');
+        buttons.forEach(btn => {
+            const btnWord = btn.firstChild.textContent.trim();
+            const verbData = verbs.find(v => v.word === btnWord);
+            
+            btn.classList.remove('wrong', 'correct', 'checked');
+            
+            if (verbData.correct) {
+                btn.classList.add('correct');
+            } else {
+                btn.style.opacity = "0.4"; // Falsche Verben verblassen in der Lösung
+                btn.style.borderColor = "#ddd";
+            }
+            btn.classList.add('checked');
+            btn.disabled = true;
+        });
+        document.getElementById('score-msg').style.display = 'block';
+        document.getElementById('score-msg').textContent = "Lösung: Diese Verben bilden eine feste Einheit mit ЗАЯВЛЕНИЕ.";
+    }
+
+    window.onload = initGame;
+</script>
+
+</body>
+</html>
