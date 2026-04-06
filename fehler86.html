@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fehlersuche: Russische Verben</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #1b5e20; /* Kräftiges Grün */
+            --error-color: #c62828;
+            --bg-color: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 700px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.4rem; color: var(--primary-color); margin-bottom: 10px; }
+        .progress { color: #888; font-size: 0.9rem; margin-bottom: 25px; font-weight: bold; }
+
+        /* Satz-Display */
+        .sentence-box {
+            background: #f9f9f9;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            line-height: 2;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            border: 2px solid #eee;
+            transition: all 0.3s;
+        }
+
+        .word {
+            cursor: pointer;
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+            user-select: none;
+        }
+
+        .word:hover { background: #e3f2fd; }
+
+        .word.selected-error {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        .sentence-box.is-correct {
+            background-color: var(--success-color);
+            color: white;
+            border-color: var(--success-color);
+        }
+        .is-correct .word { cursor: default; background: transparent !important; }
+
+        .translation {
+            font-size: 0.95rem;
+            color: #666;
+            font-style: italic;
+            margin-bottom: 25px;
+        }
+
+        /* Korrektur-Bereich */
+        .correction-area {
+            display: none;
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #fff3e0;
+            border-radius: 10px;
+            animation: fadeIn 0.4s;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .option-btn {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: 2px solid var(--secondary-color);
+            background: white;
+            color: var(--secondary-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover { background: var(--secondary-color); color: white; }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .nav-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            background: #95a5a6;
+        }
+
+        #next-btn { background: var(--primary-color); display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Finde und korrigiere den Fehler</h1>
+    <div class="progress" id="progress">Satz 1 von 5</div>
+
+    <div id="quiz-area">
+        <p><i>Klicke auf das falsche Verb im Satz:</i></p>
+        <div class="sentence-box" id="sentence-container">
+            <!-- Wörter werden hier geladen -->
+        </div>
+        <div class="translation" id="translation"></div>
+
+        <div class="correction-area" id="correction-area">
+            <p>Wähle das richtige Verb:</p>
+            <div id="options"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="nav-btn" onclick="restartQuiz()">Neustart</button>
+        <button class="nav-btn" onclick="showSolution()">Lösung</button>
+        <button class="nav-btn" id="next-btn" onclick="nextQuestion()">Weiter</button>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        {
+            words: ["Президент", "выявил", "войну", "законченной."],
+            errorIdx: 1,
+            correct: "объявил",
+            options: ["объявил", "заявил", "выявил"],
+            translation: "Der Präsident erklärte den Krieg für beendet."
+        },
+        {
+            words: ["Врач", "объявил", "болезнь", "у", "пациента."],
+            errorIdx: 1,
+            correct: "выявил",
+            options: ["заявил", "выявил", "объявил"],
+            translation: "Der Arzt stellte eine Krankheit beim Patienten fest."
+        },
+        {
+            words: ["Директор", "выявил", "о", "своём", "увольнении."],
+            errorIdx: 1,
+            correct: "заявил",
+            options: ["заявил", "объявил", "выявил"],
+            translation: "Der Direktor hat offiziell seinen Rücktritt erklärt."
+        },
+        {
+            words: ["Проверка", "заявила", "ошибки", "в", "работе."],
+            errorIdx: 1,
+            correct: "выявила",
+            options: ["объявила", "выявила", "заявила"],
+            translation: "Die Prüfung deckte Fehler in der Arbeit auf."
+        },
+        {
+            words: ["Студентам", "заявили", "результаты", "экзамена."],
+            errorIdx: 1,
+            correct: "объявили",
+            options: ["выявили", "объявили", "заявили"],
+            translation: "Den Studenten wurden die Prüfungsergebnisse verkündet."
+        }
+    ];
+
+    let currentIdx = 0;
+    let errorDetected = false;
+    let answered = false;
+
+    function initQuiz() {
+        currentIdx = 0;
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        errorDetected = false;
+        answered = false;
+        const q = quizData[currentIdx];
+        document.getElementById('progress').textContent = `Satz ${currentIdx + 1} von ${quizData.length}`;
+        document.getElementById('translation').textContent = q.translation;
+        document.getElementById('correction-area').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'none';
+        
+        const container = document.getElementById('sentence-container');
+        container.className = 'sentence-box';
+        container.innerHTML = '';
+
+        q.words.forEach((word, idx) => {
+            const span = document.createElement('span');
+            span.className = 'word';
+            span.textContent = word;
+            span.onclick = () => handleWordClick(span, idx);
+            container.appendChild(span);
+        });
+    }
+
+    function handleWordClick(span, idx) {
+        if (answered) return;
+        const q = quizData[currentIdx];
+
+        if (idx === q.errorIdx) {
+            span.classList.add('selected-error');
+            errorDetected = true;
+            showOptions();
+        } else {
+            // Shake-Effekt bei falschem Wort
+            span.style.background = "#ffcdd2";
+            setTimeout(() => { span.style.background = "transparent"; }, 400);
+        }
+    }
+
+    function showOptions() {
+        const q = quizData[currentIdx];
+        const optionsDiv = document.getElementById('options');
+        const area = document.getElementById('correction-area');
+        
+        optionsDiv.innerHTML = '';
+        q.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt;
+            btn.onclick = () => selectCorrection(opt);
+            optionsDiv.appendChild(btn);
+        });
+        area.style.display = 'block';
+    }
+
+    function selectCorrection(choice) {
+        const q = quizData[currentIdx];
+        if (choice === q.correct) {
+            applyCorrectAnswer(q.correct);
+        } else {
+            alert("Nicht ganz. Versuch es noch einmal!");
+        }
+    }
+
+    function applyCorrectAnswer(correctVerb) {
+        answered = true;
+        const container = document.getElementById('sentence-container');
+        const q = quizData[currentIdx];
+        
+        // Den Satz visuell heilen
+        container.innerHTML = '';
+        q.words.forEach((word, idx) => {
+            const span = document.createElement('span');
+            span.className = 'word';
+            span.textContent = (idx === q.errorIdx) ? correctVerb : word;
+            container.appendChild(span);
+        });
+
+        container.classList.add('is-correct');
+        document.getElementById('correction-area').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'inline-block';
+    }
+
+    function showSolution() {
+        if (answered) return;
+        const q = quizData[currentIdx];
+        applyCorrectAnswer(q.correct);
+    }
+
+    function nextQuestion() {
+        if (currentIdx < quizData.length - 1) {
+            currentIdx++;
+            loadQuestion();
+        } else {
+            alert("Hervorragend! Du hast alle Fehler korrigiert.");
+            restartQuiz();
+        }
+    }
+
+    function restartQuiz() {
+        initQuiz();
+    }
+
+    window.onload = initQuiz;
+</script>
+
+</body>
+</html>
